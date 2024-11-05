@@ -18,7 +18,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: true, // Set to false if testing on localhost without HTTPS
+        secure: false, // Set to true if using HTTPS, false for local testing
         sameSite: 'none'
     }
 }));
@@ -47,6 +47,7 @@ app.post('/login', (req, res) => {
     if (passkey === correctPasskey) {
         req.session.authenticated = true;
         console.log("User authenticated, session created.");
+        console.log("Session ID:", req.sessionID);
         res.status(200).json({ message: "Login successful" });
     } else {
         console.log("Authentication failed.");
@@ -57,6 +58,7 @@ app.post('/login', (req, res) => {
 // Authentication status check
 app.get('/auth-status', (req, res) => {
     console.log("Checking auth status");
+    console.log("Session:", req.session); // Log the session content
     res.json({ authenticated: req.session.authenticated || false });
 });
 
