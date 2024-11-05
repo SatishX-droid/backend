@@ -20,8 +20,11 @@ app.use(session({
     store: new FileStore({ path: './sessions' }), 
     secret: process.env.SESSION_SECRET || 'default_secret',
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === 'production' }
+    saveUninitialized: false, // Only save sessions that have been modified
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+        httpOnly: true // Prevent client-side JavaScript from accessing the cookie
+    }
 }));
 
 // Activity tracking data
@@ -57,7 +60,7 @@ function isAuthenticated(req, res, next) {
     }
 }
 
-// Logout endpoint - ensures session is cleared
+// Logout endpoint
 app.post('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
