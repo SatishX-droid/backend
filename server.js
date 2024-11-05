@@ -43,10 +43,13 @@ let activityData = {
 // Login endpoint
 app.post('/login', (req, res) => {
     const { passkey } = req.body;
+    console.log(`Received passkey: ${passkey}`); // Log the received passkey
     if (passkey === correctPasskey) {
         req.session.authenticated = true;
+        console.log('Login successful'); // Log successful login
         res.status(200).json({ message: "Login successful" });
     } else {
+        console.log('Incorrect passkey'); // Log incorrect passkey
         res.status(401).json({ message: "Incorrect passkey" });
     }
 });
