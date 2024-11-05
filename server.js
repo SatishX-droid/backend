@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -8,13 +7,11 @@ require('dotenv').config(); // Load environment variables
 
 const app = express();
 
-// CORS configuration
+// Middleware setup
 app.use(cors({
-    origin: 'https://iosx.vercel.app', // Change this to your front-end URL
+    origin: 'https://iosx.vercel.app', // Your front-end URL
     credentials: true // Allow credentials to be sent
 }));
-
-// Middleware setup
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
@@ -43,13 +40,10 @@ let activityData = {
 // Login endpoint
 app.post('/login', (req, res) => {
     const { passkey } = req.body;
-    console.log(`Received passkey: ${passkey}`); // Log the received passkey
     if (passkey === correctPasskey) {
         req.session.authenticated = true;
-        console.log('Login successful'); // Log successful login
         res.status(200).json({ message: "Login successful" });
     } else {
-        console.log('Incorrect passkey'); // Log incorrect passkey
         res.status(401).json({ message: "Incorrect passkey" });
     }
 });
