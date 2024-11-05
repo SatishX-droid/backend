@@ -14,11 +14,13 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(session({
     store: new FileStore(), // Use FileStore for sessions
-    secret: '507402e9bca79ed5711bb5b3cec082b9c9c8846bfe2405dbc8e0da3ca445acc0', // Replace with your actual secret key
+    secret: 'your_secret_key', // Replace with your actual secret key
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: false, // Set to true if using HTTPS, false for local testing
+        maxAge: 86400000, // Set cookie to expire in 1 day (24 hours)
+        httpOnly: true,
+        secure: false, // Set to true if using HTTPS in production
         sameSite: 'none'
     }
 }));
