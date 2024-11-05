@@ -9,17 +9,11 @@ const app = express();
 
 // Middleware setup
 app.use(cors({
-    origin: 'https://iosx.vercel.app', // Update to your frontend URL
-    credentials: true // Allow credentials to be sent
+    origin: 'https://iosx.vercel.app', // Update to match your frontend URL
+    credentials: true // Allow cookies to be included in requests
 }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-
-// Middleware to log incoming cookies for debugging
-app.use((req, res, next) => {
-    console.log('Incoming cookies:', req.headers.cookie);
-    next();
-});
 
 // Session configuration with FileStore
 app.use(session({
@@ -30,6 +24,7 @@ app.use(session({
     cookie: {
         secure: process.env.NODE_ENV === 'production', // Ensure this is true in production
         httpOnly: true,
+        sameSite: 'none', // Required for cross-site cookies
         maxAge: 24 * 60 * 60 * 1000 // 1 day expiration
     }
 }));
@@ -53,6 +48,7 @@ app.post('/login', (req, res) => {
     if (passkey === correctPasskey) {
         req.session.authenticated = true;
         console.log('User authenticated, session created.');
+        console.log('Session ID:', req.session.id);
         res.status(200).json({ message: "Login successful" });
     } else {
         res.status(401).json({ message: "Incorrect passkey" });
