@@ -7,7 +7,7 @@ require('dotenv').config();
 
 const app = express();
 
-// Middleware setup
+// Enable CORS with cookies
 app.use(cors({
     origin: 'https://iosx.vercel.app', // Your frontend URL
     credentials: true, // Allow cookies to be sent in cross-origin requests
@@ -23,18 +23,18 @@ app.use(session({
     resave: false,
     saveUninitialized: true,
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // Enable secure cookies in production
+        secure: true, // Secure cookies for production (HTTPS)
         httpOnly: true,
         sameSite: 'none', // Required for cross-origin cookies
         maxAge: 24 * 60 * 60 * 1000, // Session expires in 1 day
     },
 }));
 
-// Log session details for debugging
+// Middleware to log each request's session and cookie details
 app.use((req, res, next) => {
     console.log("Incoming cookies:", req.headers.cookie);
     console.log("Session ID:", req.sessionID);
-    console.log("Session:", req.session);
+    console.log("Session content:", req.session);
     next();
 });
 
@@ -65,7 +65,7 @@ app.post('/login', (req, res) => {
 
 // Middleware to check if user is authenticated
 function isAuthenticated(req, res, next) {
-    if (req.session.authenticated) {
+    if (req.session && req.session.authenticated) {
         next();
     } else {
         res.status(401).json({ message: "Unauthorized" });
@@ -74,6 +74,7 @@ function isAuthenticated(req, res, next) {
 
 // Endpoint to check authentication status
 app.get('/auth-status', (req, res) => {
+    console.log("Checking auth status:", req.session.authenticated);
     res.status(200).json({ authenticated: !!req.session.authenticated });
 });
 
