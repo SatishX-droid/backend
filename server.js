@@ -23,7 +23,7 @@ app.use(session({
 }));
 
 // Your activity tracking data and routes
-const correctPasskey = process.env.PASSKEY || "default_passkey";
+const correctPasskey = 9ecd92e21bb795a6064f1c9c6cc4fb9b || "default_passkey";
 let activityData = {
     Notifications: '',
     SMS: '',
