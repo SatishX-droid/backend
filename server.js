@@ -3,37 +3,27 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
-const RedisStore = require('connect-redis')(session);
-const { createClient } = require('redis');
-require('dotenv').config(); // Load environment variables from .env file
+const FileStore = require('file-store')(session); // File-based session storage
+require('dotenv').config(); // Load environment variables
 
 const app = express();
-
-// Initialize Redis client
-const redisClient = createClient({
-    url: process.env.REDIS_URL, // Render will provide this URL
-    legacyMode: true,           // Required for compatibility with connect-redis
-});
-redisClient.connect().catch(console.error); // Connect to Redis
 
 // Middleware setup
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Session configuration with Redis store
+// Session configuration with FileStore
 app.use(session({
-    store: new RedisStore({ client: redisClient }),
+    store: new FileStore({ path: './sessions' }), // Specify the directory for session files
     secret: process.env.SESSION_SECRET || 'default_secret',
     resave: false,
     saveUninitialized: true,
     cookie: { secure: process.env.NODE_ENV === 'production' }
 }));
 
-// Passkey from environment variables
+// Your activity tracking data and routes
 const correctPasskey = process.env.PASSKEY || "default_passkey";
-
-// Activity data storage
 let activityData = {
     Notifications: '',
     SMS: '',
@@ -48,7 +38,6 @@ let activityData = {
 // Login endpoint
 app.post('/login', (req, res) => {
     const { passkey } = req.body;
-    
     if (passkey === correctPasskey) {
         req.session.authenticated = true;
         res.status(200).json({ message: "Login successful" });
@@ -57,7 +46,7 @@ app.post('/login', (req, res) => {
     }
 });
 
-// Middleware to ensure user is authenticated
+// Middleware to check if user is authenticated
 function isAuthenticated(req, res, next) {
     if (req.session.authenticated) {
         next();
