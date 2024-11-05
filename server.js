@@ -3,21 +3,31 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
+const RedisStore = require('connect-redis')(session);
+const { createClient } = require('redis');
 require('dotenv').config(); // Load environment variables from .env file
 
 const app = express();
+
+// Initialize Redis client
+const redisClient = createClient({
+    url: process.env.REDIS_URL, // Render will provide this URL
+    legacyMode: true,           // Required for compatibility with connect-redis
+});
+redisClient.connect().catch(console.error); // Connect to Redis
 
 // Middleware setup
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Session configuration with secure environment variables
+// Session configuration with Redis store
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'default_secret', // Use a strong secret in .env
+    store: new RedisStore({ client: redisClient }),
+    secret: process.env.SESSION_SECRET || 'default_secret',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === 'production' } // Secure cookie in production
+    cookie: { secure: process.env.NODE_ENV === 'production' }
 }));
 
 // Passkey from environment variables
