@@ -3,6 +3,7 @@ const session = require('express-session');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const app = express();
+const FileStore = require('session-file-store')(session);
 
 // CORS configuration
 app.use(cors({
@@ -12,12 +13,13 @@ app.use(cors({
 
 // Session configuration
 app.use(session({
-    secret: '507402e9bca79ed5711bb5b3cec082b9c9c8846bfe2405dbc8e0da3ca445acc0', // replace with a strong secret in production
+    store: new FileStore({ path: './sessions' }),
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: true, // Set to true for production
+        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
         sameSite: 'none',
         maxAge: 24 * 60 * 60 * 1000 // 1 day
     }
