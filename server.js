@@ -27,6 +27,13 @@ app.use(session({
     }
 }));
 
+// Logging middleware to help with debugging
+app.use((req, res, next) => {
+    console.log('Session ID:', req.sessionID);
+    console.log('Session:', req.session);
+    next();
+});
+
 // Activity tracking data
 const correctPasskey = process.env.PASSKEY || "default_passkey";
 let activityData = {
@@ -45,6 +52,7 @@ app.post('/login', (req, res) => {
     const { passkey } = req.body;
     if (passkey === correctPasskey) {
         req.session.authenticated = true;
+        console.log('User authenticated, session created.');
         res.status(200).json({ message: "Login successful" });
     } else {
         res.status(401).json({ message: "Incorrect passkey" });
@@ -54,8 +62,10 @@ app.post('/login', (req, res) => {
 // Middleware to check if user is authenticated
 function isAuthenticated(req, res, next) {
     if (req.session.authenticated) {
+        console.log('User is authenticated');
         next();
     } else {
+        console.log('User is not authenticated, redirecting...');
         res.status(401).json({ message: "Unauthorized" });
     }
 }
@@ -67,33 +77,14 @@ app.post('/logout', (req, res) => {
             return res.status(500).json({ message: "Logout failed" });
         }
         res.clearCookie('connect.sid'); // Clears session cookie on the client
+        console.log('User logged out, session destroyed.');
         res.status(200).json({ message: "Logged out" });
     });
 });
 
-// Endpoint to receive monitoring data
-app.post('/monitor', isAuthenticated, (req, res) => {
-    const { activityType, data } = req.body;
-    if (activityType && activityData[activityType] !== undefined) {
-        activityData[activityType] = data;
-        res.sendStatus(200);
-    } else {
-        res.status(400).json({ message: "Invalid activity type" });
-    }
-});
-
-// Endpoint to fetch activity data for authenticated clients
-app.get('/fetch/:activityType', isAuthenticated, (req, res) => {
-    const { activityType } = req.params;
-    if (activityData[activityType] !== undefined) {
-        res.json({ data: activityData[activityType] || "No data available" });
-    } else {
-        res.status(400).json({ message: "Invalid activity type" });
-    }
-});
-
 // Endpoint to check authentication status
 app.get('/auth-status', (req, res) => {
+    console.log('Checking auth status:', req.session.authenticated);
     res.status(200).json({ authenticated: !!req.session.authenticated });
 });
 
