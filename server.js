@@ -2,29 +2,29 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
-const FileStore = require('session-file-store')(session); // File-based session storage
-require('dotenv').config(); // Load environment variables
+const FileStore = require('session-file-store')(session); 
+require('dotenv').config();
 
 const app = express();
 
 // Middleware setup
 app.use(cors({
-    origin: 'https://iosx.vercel.app', // Your front-end URL
-    credentials: true // Allow credentials to be sent
+    origin: 'https://iosx.vercel.app', // Frontend URL
+    credentials: true 
 }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // Session configuration with FileStore
 app.use(session({
-    store: new FileStore({ path: './sessions' }), // Specify the directory for session files
+    store: new FileStore({ path: './sessions' }), 
     secret: process.env.SESSION_SECRET || 'default_secret',
     resave: false,
     saveUninitialized: true,
     cookie: { secure: process.env.NODE_ENV === 'production' }
 }));
 
-// Your activity tracking data and routes
+// Activity tracking data
 const correctPasskey = process.env.PASSKEY || "default_passkey";
 let activityData = {
     Notifications: '',
@@ -57,6 +57,17 @@ function isAuthenticated(req, res, next) {
     }
 }
 
+// Logout endpoint - ensures session is cleared
+app.post('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ message: "Logout failed" });
+        }
+        res.clearCookie('connect.sid'); // Clears session cookie on the client
+        res.status(200).json({ message: "Logged out" });
+    });
+});
+
 // Endpoint to receive monitoring data
 app.post('/monitor', isAuthenticated, (req, res) => {
     const { activityType, data } = req.body;
@@ -81,13 +92,6 @@ app.get('/fetch/:activityType', isAuthenticated, (req, res) => {
 // Endpoint to check authentication status
 app.get('/auth-status', (req, res) => {
     res.status(200).json({ authenticated: !!req.session.authenticated });
-});
-
-// Logout endpoint
-app.post('/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.status(200).json({ message: "Logged out" });
-    });
 });
 
 // Start server
