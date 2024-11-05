@@ -9,25 +9,34 @@ const app = express();
 
 // Middleware setup
 app.use(cors({
-    origin: 'https://iosx.vercel.app', // Update to match your frontend URL
-    credentials: true // Allow cookies to be included in requests
+    origin: 'https://iosx.vercel.app', // Your frontend URL
+    credentials: true, // Allow cookies to be sent in cross-origin requests
 }));
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Session configuration with FileStore
+// Session configuration
 app.use(session({
     store: new FileStore({ path: './sessions' }),
     secret: process.env.SESSION_SECRET || 'default_secret',
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // Ensure this is true in production
+        secure: process.env.NODE_ENV === 'production', // Enable secure cookies in production
         httpOnly: true,
-        sameSite: 'none', // Required for cross-site cookies
-        maxAge: 24 * 60 * 60 * 1000 // 1 day expiration
-    }
+        sameSite: 'none', // Required for cross-origin cookies
+        maxAge: 24 * 60 * 60 * 1000, // Session expires in 1 day
+    },
 }));
+
+// Log session details for debugging
+app.use((req, res, next) => {
+    console.log("Incoming cookies:", req.headers.cookie);
+    console.log("Session ID:", req.sessionID);
+    console.log("Session:", req.session);
+    next();
+});
 
 // Your activity tracking data and routes
 const correctPasskey = process.env.PASSKEY || "default_passkey";
@@ -47,8 +56,7 @@ app.post('/login', (req, res) => {
     const { passkey } = req.body;
     if (passkey === correctPasskey) {
         req.session.authenticated = true;
-        console.log('User authenticated, session created.');
-        console.log('Session ID:', req.session.id);
+        console.log("User authenticated, session created.");
         res.status(200).json({ message: "Login successful" });
     } else {
         res.status(401).json({ message: "Incorrect passkey" });
@@ -66,19 +74,7 @@ function isAuthenticated(req, res, next) {
 
 // Endpoint to check authentication status
 app.get('/auth-status', (req, res) => {
-    console.log('Checking auth status:', req.session.authenticated);
     res.status(200).json({ authenticated: !!req.session.authenticated });
-});
-
-// Endpoint to receive monitoring data
-app.post('/monitor', isAuthenticated, (req, res) => {
-    const { activityType, data } = req.body;
-    if (activityType && activityData[activityType] !== undefined) {
-        activityData[activityType] = data;
-        res.sendStatus(200);
-    } else {
-        res.status(400).json({ message: "Invalid activity type" });
-    }
 });
 
 // Endpoint to fetch activity data for authenticated clients
