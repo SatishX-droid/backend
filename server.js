@@ -20,7 +20,7 @@ app.use(session({
     cookie: { 
         maxAge: 86400000, // Set cookie to expire in 1 day (24 hours)
         httpOnly: true,
-        secure: false, // Set to true if using HTTPS in production
+        secure: true, // Set to true if using HTTPS in production
         sameSite: 'none'
     }
 }));
