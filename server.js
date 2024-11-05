@@ -3,7 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
-const FileStore = require('file-store')(session); // File-based session storage
+const FileStore = require('session-file-store')(session); // File-based session storage
 require('dotenv').config(); // Load environment variables
 
 const app = express();
