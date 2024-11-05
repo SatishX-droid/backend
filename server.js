@@ -9,14 +9,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.use(session({
-    secret: 'your_secret_key', // Replace with a strong secret in production
+    secret: '507402e9bca79ed5711bb5b3cec082b9c9c8846bfe2405dbc8e0da3ca445acc0', // Replace with a strong secret in production
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false } // Set to true if using HTTPS
+    cookie: { secure: true } // Set to true if using HTTPS
 }));
 
 // Replace with your actual passkey
-const correctPasskey = "your_secure_passkey";
+const correctPasskey = "9ecd92e21bb795a6064f1c9c6cc4fb9b";
 
 let activityData = {
     Notifications: '',
