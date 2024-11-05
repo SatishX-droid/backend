@@ -1,19 +1,30 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
 const session = require('express-session');
+const FileStore = require('session-file-store')(session);
+const cors = require('cors');
+const bodyParser = require('body-parser');
+
 const app = express();
 
-app.use(cors());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-
-app.use(session({
-    secret: '507402e9bca79ed5711bb5b3cec082b9c9c8846bfe2405dbc8e0da3ca445acc0', // Replace with a strong secret in production
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: true } // Set to true if using HTTPS
+// Middleware
+app.use(cors({
+    origin: 'https://iosx.vercel.app', // Your frontend URL
+    credentials: true // Allow credentials to be sent
 }));
+app.use(bodyParser.json());
+app.use(session({
+    store: new FileStore(), // Use FileStore for sessions
+    secret: '507402e9bca79ed5711bb5b3cec082b9c9c8846bfe2405dbc8e0da3ca445acc0', // Replace with your actual secret key
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        maxAge: 86400000, // Set cookie to expire in 1 day (24 hours)
+        httpOnly: true,
+        secure: false, // Set to true if using HTTPS in production
+        sameSite: 'none'
+    }
+}));
+
 
 // Replace with your actual passkey
 const correctPasskey = "9ecd92e21bb795a6064f1c9c6cc4fb9b";
