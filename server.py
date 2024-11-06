@@ -5,6 +5,11 @@ app = Flask(__name__)
 # Dictionary to store data by activity type
 data_store = {}
 
+# Root endpoint to verify server status
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({"status": "Server is running"}), 200
+
 # Endpoint to receive data from iOS tweak
 @app.route('/receive_data', methods=['POST'])
 def receive_data():
